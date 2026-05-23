@@ -1,19 +1,37 @@
 node_modules
 
 
+
+
+
 dist
+
 /generated/prisma
 
+
+
 .git
+
 uploads
 
-.env
+
+
+
+
 
 src/generated
-.vercel
-api
-api/server.js
-/api/server.js
+
 .vercel
 
+api
+
+api/server.js
+
+/api/server.js
+
+.vercel
+
+
+
 .env*.local
+config.bat
