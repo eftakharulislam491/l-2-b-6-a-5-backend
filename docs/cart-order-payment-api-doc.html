@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>User, Cart, Order, Payment, Review API Guide</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --text: #0f172a;
+        --muted: #334155;
+        --card: #ffffff;
+        --line: #cbd5e1;
+        --accent: #0f766e;
+        --accent-soft: #ccfbf1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.45;
+      }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .hero {
+        background: linear-gradient(125deg, #ccfbf1, #e2e8f0);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        color: #134e4a;
+      }
+
+      h2 {
+        margin: 0 0 10px;
+        font-size: 20px;
+        color: #115e59;
+      }
+
+      h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        color: #0f766e;
+      }
+
+      p {
+        margin: 6px 0;
+      }
+
+      .section {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .badge {
+        display: inline-block;
+        background: var(--accent-soft);
+        border: 1px solid #99f6e4;
+        color: #0f766e;
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        margin-right: 6px;
+        margin-bottom: 6px;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      pre {
+        margin: 8px 0 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #f8fafc;
+        overflow-x: auto;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 8px;
+        vertical-align: top;
+        text-align: left;
+      }
+
+      th {
+        background: #ecfeff;
+        color: #115e59;
+      }
+
+      code {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 1px 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="hero">
+        <h1>User + Cart + Order + Payment + Review API Guide</h1>
+        <p>
+          Frontend-ready route map with request body interfaces for all
+          <code>POST</code> and <code>PATCH</code> endpoints.
+        </p>
+        <p class="small">
+          Source: <code>backend/src/app/modules/user</code>,
+          <code>backend/src/app/modules/cart</code>,
+          <code>backend/src/app/modules/order</code>,
+          <code>backend/src/app/modules/payment</code>,
+          <code>backend/src/app/modules/review</code>,
+          <code>backend/src/app/routes/index.ts</code> |
+          Generated: 2026-04-15
+        </p>
+      </section>
+
+      <section class="section">
+        <h2>Base Info</h2>
+        <p><span class="badge">Base URL</span><code>/api</code></p>
+        <p><span class="badge">Auth</span><code>Authorization: Bearer &lt;jwt&gt;</code></p>
+        <p><span class="badge">Roles</span><code>USER</code> <code>ADMIN</code> <code>MANAGER</code></p>
+      </section>
+
+      <section class="section">
+        <h2>Shared Interfaces for POST/PATCH/PUT Body</h2>
+
+        <h3>Cart</h3>
+        <pre><code>interface IAddCartItemPayload {
+  productId: string; // UUID
+  optionIds?: string[]; // UUID[]
+  variantOptionId?: string; // UUID
+  variantOptionIds?: string[]; // UUID[]
+  quantity?: number; // integer, 1..100
+}
+
+Business rule:
+- At least one must exist: variantOptionId OR variantOptionIds OR optionIds
+- Duplicate IDs in optionIds / variantOptionIds are not allowed
+
+interface IUpdateCartItemPayload {
+  quantity: number; // integer, 1..100
+}</code></pre>
+
+        <h3>Order</h3>
+        <pre><code>type TPaymentMethod =
+  | "CASH_ON_DELIVERY"
+  | "BKASH"
+  | "NAGAD"
+  | "ROCKET"
+  | "CREDIT_CARD"
+  | "BANK_TRANSFER";
+
+type TOrderStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "CONFIRMED"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "RETURNED"
+  | "REFUNDED";
+
+interface ICreateOrderPayload {
+  shippingAddressId: string; // UUID
+  paymentMethod: TPaymentMethod;
+  notes?: string; // 1..2000 chars
+  billingAddress?: Record&lt;string, unknown&gt;;
+  shippingCost?: number; // >= 0
+  tax?: number; // >= 0
+}
+
+interface IUpdateOrderStatusPayload {
+  status: TOrderStatus;
+  note?: string; // 1..500 chars
+}</code></pre>
+
+        <h3>Payment</h3>
+        <pre><code>// Used by payment initiation routes:
+interface IInitiatePaymentBody {}
+// Strict empty object. Do not send extra keys.
+
+// Used by callback/validation routes:
+interface ISslCallbackPayload {
+  tran_id?: string;
+  transactionId?: string;
+  val_id?: string;
+  status?: string;
+  amount?: string | number;
+}
+
+Business rule:
+- tran_id OR transactionId is required
+- If status means success (SUCCESS / VALID / VALIDATED), val_id is required</code></pre>
+
+        <h3>Review</h3>
+        <pre><code>interface ICreateReviewPayload {
+  productId: string; // UUID
+  rating: number; // integer, 1..5
+  title?: string; // 1..255 chars
+  comment?: string; // 1..2000 chars
+}
+
+interface IUpdateMyReviewPayload {
+  rating?: number; // integer, 1..5
+  title?: string; // 1..255 chars
+  comment?: string; // 1..2000 chars
+}
+
+interface IModerateReviewPayload {
+  isApproved?: boolean;
+  isVerifiedPurchase?: boolean;
+}
+
+interface IReplyReviewPayload {
+  adminReply: string | null; // null = remove reply
+}
+
+Business rule:
+- update/moderate body cannot be empty
+- for adminReply, blank string becomes null</code></pre>
+
+        <h3>User</h3>
+        <pre><code>type TRole = "ADMIN" | "USER" | "MANAGER";
+
+type TUserStatus = "ACTIVE" | "BLOCKED" | "DELETED";
+
+interface IAdminUpdateUserPayload {
+  name?: string; // 2..50 chars
+  role?: TRole;
+  emailVerified?: boolean;
+  status?: TUserStatus;
+  phone?: string; // "+8801XXXXXXXXX" or "01XXXXXXXXX"
+}
+
+interface IUpdateMePayload {
+  name?: string; // 2..50 chars
+  phone?: string; // "+8801XXXXXXXXX" or "01XXXXXXXXX"
+  image?: string | null; // valid URL
+  status?: "DELETED"; // current validation only accepts DELETED
+}
+
+interface ICreateAddressPayload {
+  label?: string; // 2..30 chars
+  recipient?: string; // 2..100 chars
+  phone?: string; // "+8801XXXXXXXXX" or "01XXXXXXXXX"
+  street: string; // 5..255 chars
+  city: string; // 2..100 chars
+  state?: string; // max 100 chars
+  zipCode?: string; // max 20 chars
+  country?: string; // max 100 chars
+  isDefault?: boolean;
+}
+
+interface IUpdateAddressPayload {
+  label?: string; // 2..30 chars
+  recipient?: string; // 2..100 chars
+  phone?: string; // "+8801XXXXXXXXX" or "01XXXXXXXXX"
+  street?: string; // 5..255 chars
+  city?: string; // 2..100 chars
+  state?: string; // max 100 chars
+  zipCode?: string; // max 20 chars
+  country?: string; // max 100 chars
+  isDefault?: boolean;
+}
+
+Business rule:
+- update address body cannot be empty
+- default address can be changed with patch or set-default route</code></pre>
+
+        <h3>Order Query Interface (GET list)</h3>
+        <pre><code>interface IOrderQuery {
+  page?: string;
+  limit?: string;
+  searchTerm?: string;
+  sort?: string; // e.g. "-placedAt,total"
+  status?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  userId?: string; // effective in admin list
+  fromDate?: string; // parseable date
+  toDate?: string; // parseable date
+}</code></pre>
+
+        <h3>Review Query Interface (GET list)</h3>
+        <pre><code>interface IReviewQuery {
+  page?: string;
+  limit?: string;
+  sort?: string; // "createdAt", "-createdAt", "rating", "-rating", etc.
+  searchTerm?: string;
+  productId?: string;
+  userId?: string; // admin list only
+  isApproved?: string; // "true" | "false"
+  isVerifiedPurchase?: string; // "true" | "false"
+  rating?: string; // 1..5
+  minRating?: string; // 1..5
+  maxRating?: string; // 1..5
+}</code></pre>
+
+        <h3>User Query Interface (GET admin list)</h3>
+        <pre><code>interface IUserQuery {
+  page?: string;
+  limit?: string;
+  searchTerm?: string; // searches name/email/phone
+  sort?: string; // e.g. "-createdAt,name"
+  fields?: string; // comma-separated select projection
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: string; // "ADMIN" | "USER" | "MANAGER"
+  status?: string; // "ACTIVE" | "BLOCKED" | "DELETED"
+}</code></pre>
+      </section>
+
+      <section class="section">
+        <h2>User Routes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Endpoint</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/user</code></td>
+              <td>ADMIN</td>
+              <td>Query: <code>IUserQuery</code></td>
+              <td>Admin list of users with pagination/filter/sort.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/user/profile/:id</code></td>
+              <td>ADMIN</td>
+              <td>Path: <code>id</code></td>
+              <td>Admin view of one user profile (includes addresses).</td>
+            </tr>
+            <tr>
+              <td>PUT</td>
+              <td><code>/api/user/update-profile/:id</code></td>
+              <td>ADMIN</td>
+              <td>Body: <code>IAdminUpdateUserPayload</code></td>
+              <td>Admin update of user profile fields/role/status.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/user/profile</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Get authenticated user's profile and addresses.</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/user/profile</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>Body: <code>IUpdateMePayload</code></td>
+              <td>Update authenticated user's own profile.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/user/addresses</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>Body: <code>ICreateAddressPayload</code></td>
+              <td>Create a new address for authenticated user.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/user/addresses</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Returns my addresses (default address first).</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/user/addresses/:addressId</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>Body: <code>IUpdateAddressPayload</code></td>
+              <td>Update one of my addresses by <code>addressId</code>.</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/user/addresses/set-default/:addressId</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Set the selected address as default.</td>
+            </tr>
+            <tr>
+              <td>DELETE</td>
+              <td><code>/api/user/addresses/:addressId</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Delete one of my addresses.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Cart Routes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Endpoint</th>
+              <th>Auth</th>
+              <th>Body</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/cart</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Returns authenticated user's cart.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/cart/items</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td><code>IAddCartItemPayload</code></td>
+              <td>Add item to cart.</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/cart/items/:itemId</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td><code>IUpdateCartItemPayload</code></td>
+              <td><code>itemId</code> path param required.</td>
+            </tr>
+            <tr>
+              <td>DELETE</td>
+              <td><code>/api/cart/items/:itemId</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Remove one cart item.</td>
+            </tr>
+            <tr>
+              <td>DELETE</td>
+              <td><code>/api/cart/clear</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Clear full cart.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Order Routes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Endpoint</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/order</code></td>
+              <td>USER</td>
+              <td>Body: <code>ICreateOrderPayload</code></td>
+              <td>Create order from current cart.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/order/my-orders</code></td>
+              <td>USER</td>
+              <td>Query: <code>IOrderQuery</code></td>
+              <td>Returns my paginated orders.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/order/my-orders/:id</code></td>
+              <td>USER</td>
+              <td>Path: <code>id</code></td>
+              <td>Get one of my orders by id.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/order</code></td>
+              <td>ADMIN/MANAGER</td>
+              <td>Query: <code>IOrderQuery</code></td>
+              <td>Admin list (supports <code>userId</code> filter).</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/order/:id</code></td>
+              <td>ADMIN/MANAGER</td>
+              <td>Path: <code>id</code></td>
+              <td>Get single order by id for admin.</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/order/:id/status</code></td>
+              <td>ADMIN/MANAGER</td>
+              <td>Body: <code>IUpdateOrderStatusPayload</code></td>
+              <td>Updates order status with transition rules.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Payment Routes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Endpoint</th>
+              <th>Auth</th>
+              <th>Body</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GET/POST</td>
+              <td><code>/api/payment/ssl/success</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Success callback. <code>tran_id</code> or <code>transactionId</code> required; <code>val_id</code> required for success validation.</td>
+            </tr>
+            <tr>
+              <td>GET/POST</td>
+              <td><code>/api/payment/ssl/fail</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Fail callback.</td>
+            </tr>
+            <tr>
+              <td>GET/POST</td>
+              <td><code>/api/payment/ssl/cancel</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Cancel callback.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/ssl/validate</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Manual validate callback payload.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/ssl/ipn</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>IPN validation endpoint.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/success</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Alias of success callback.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/fail</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Alias of fail callback.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/cancel</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Alias of cancel callback.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/validate-payment</code></td>
+              <td>Public</td>
+              <td><code>ISslCallbackPayload</code></td>
+              <td>Alias of validate callback.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/:orderId/initiate</code></td>
+              <td>USER</td>
+              <td><code>IInitiatePaymentBody</code> (empty object)</td>
+              <td>Initiate payment by order id.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/payment/init-payment/:orderId</code></td>
+              <td>USER</td>
+              <td><code>IInitiatePaymentBody</code> (empty object)</td>
+              <td>Alternative initiation route.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/payment/invoice/:paymentId</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Returns invoice download URL.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/payment/invoice/:paymentId/download</code></td>
+              <td>USER/ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Returns invoice HTML as downloadable file.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/payment/my/:orderId</code></td>
+              <td>USER</td>
+              <td>None</td>
+              <td>Get my payment by order id.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/payment/:orderId</code></td>
+              <td>ADMIN/MANAGER</td>
+              <td>None</td>
+              <td>Get payment by order id for admin/manager.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Review Routes</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>Endpoint</th>
+              <th>Auth</th>
+              <th>Body / Query</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/review/product/:productId</code></td>
+              <td>Public</td>
+              <td>Query: <code>IReviewQuery</code></td>
+              <td>Public approved reviews + rating summary for one product.</td>
+            </tr>
+            <tr>
+              <td>POST</td>
+              <td><code>/api/review</code></td>
+              <td>USER</td>
+              <td>Body: <code>ICreateReviewPayload</code></td>
+              <td>Create one review per user per product.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/review/my-reviews</code></td>
+              <td>USER</td>
+              <td>Query: <code>IReviewQuery</code></td>
+              <td>Get my reviews with pagination/filter.</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/review/:id</code></td>
+              <td>USER</td>
+              <td>Body: <code>IUpdateMyReviewPayload</code></td>
+              <td>Partial update for own review.</td>
+            </tr>
+            <tr>
+              <td>PUT</td>
+              <td><code>/api/review/:id</code></td>
+              <td>USER</td>
+              <td>Body: <code>IUpdateMyReviewPayload</code></td>
+              <td>Same handler as PATCH in current backend.</td>
+            </tr>
+            <tr>
+              <td>DELETE</td>
+              <td><code>/api/review/:id</code></td>
+              <td>USER</td>
+              <td>None</td>
+              <td>Delete own review.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/review</code></td>
+              <td>ADMIN</td>
+              <td>Query: <code>IReviewQuery</code></td>
+              <td>Admin review list.</td>
+            </tr>
+            <tr>
+              <td>GET</td>
+              <td><code>/api/review/:id/admin</code></td>
+              <td>ADMIN</td>
+              <td>None</td>
+              <td>Admin single review details.</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/review/:id/moderate</code></td>
+              <td>ADMIN</td>
+              <td>Body: <code>IModerateReviewPayload</code></td>
+              <td>Approve/disapprove and verified-purchase moderation.</td>
+            </tr>
+            <tr>
+              <td>PATCH</td>
+              <td><code>/api/review/:id/reply</code></td>
+              <td>ADMIN</td>
+              <td>Body: <code>IReplyReviewPayload</code></td>
+              <td>Add/update/remove admin reply.</td>
+            </tr>
+            <tr>
+              <td>DELETE</td>
+              <td><code>/api/review/:id/admin</code></td>
+              <td>ADMIN</td>
+              <td>None</td>
+              <td>Delete review by admin.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>Quick Frontend Notes</h2>
+        <p>
+          For protected endpoints, include JWT in Authorization header. Public
+          SSL callback routes should be called by payment gateway server.
+        </p>
+        <p>
+          Most ids are UUID values in this project schema
+          (<code>orderId</code>, <code>itemId</code>, <code>paymentId</code>,
+          <code>productId</code>, <code>reviewId</code>,
+          <code>addressId</code>, <code>userId</code>).
+        </p>
+        <p>
+          For payment initiation routes, send an empty JSON object:
+          <code>{}</code>.
+        </p>
+      </section>
+    </div>
+  </body>
+</html>
