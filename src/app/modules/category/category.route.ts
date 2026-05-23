@@ -1,0 +1,44 @@
+import { Router } from "express";
+import { checkAuth } from "../../middlewares/checkAuth";
+import { validateRequest } from "../../middlewares/validateRequest";
+import { Role } from "../user/user.interface";
+import { CategoryControllers } from "./category.controller";
+import {
+  createCategoryZodSchema,
+  updateCategoryZodSchema,
+} from "./category.validation";
+
+// /api/category
+
+const router = Router();
+
+router.post(
+  "/",
+  checkAuth(Role.ADMIN),
+  validateRequest(createCategoryZodSchema),
+  CategoryControllers.createCategory,
+);
+
+router.get(
+  "/",
+  checkAuth(...Object.values(Role)),
+  CategoryControllers.getCategories,
+);
+
+router.get("/collections", CategoryControllers.getPublicCollections);
+
+router.patch(
+  "/:id",
+  checkAuth(Role.ADMIN),
+  validateRequest(updateCategoryZodSchema),
+  CategoryControllers.updateCategory,
+);
+
+router.delete("/:id", checkAuth(Role.ADMIN), CategoryControllers.deleteCategory);
+
+router.get(
+  "/:id",
+  CategoryControllers.getCategoryById,
+);
+
+export const CategoryRoutes = router;
